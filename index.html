@@ -316,7 +316,7 @@
   svg.selectAll(".dddd")
     .data( obstacles)
       .enter().append("image")
-      .attr("xlink:href", "https://openclipart.org/image/2400px/svg_to_png/219912/strike_worker.png")
+      .attr("xlink:href", "strike.png")
       .attr("x", function(d,i) {return d[0]-25;})
       .attr("y", function(d,i) {return d[1]-25;})
       .attr("width", 50)
@@ -330,7 +330,7 @@
       .attr("height", 100);
   
     var aim = svg.append("image")
-      .attr("xlink:href", "Untitled.png")
+      .attr("xlink:href", "door.png")
       .attr("x", (aim_coord[0]-50))
       .attr("y", (aim_coord[1]-50))
       .attr("width", 150)
@@ -344,7 +344,7 @@
       svg.style("background-color", 'darkblue');
 
       var dest = svg.append("image")
-        .attr("xlink:href", "http://vignette2.wikia.nocookie.net/clubpenguin/images/f/f3/Desert_Island.PNG/revision/latest?cb=20141120022620")
+        .attr("xlink:href", "island.png")
         .attr("x", (dest_coord[0]-50))
         .attr("y", (dest_coord[1]-50))
         .attr("width", 100)
@@ -353,7 +353,7 @@
       var origin_new = svg.append("g");
 
       var origin_new_new = origin_new.append("image")
-       .attr("xlink:href", "http://4vector.com/i/free-vector-sailing-boat-clip-art_107845_Sailing_Boat_clip_art_hight.png")
+       .attr("xlink:href", "boat.png")
        .attr("x", (path[path.length-1][0]-40))
        .attr("y", (path[path.length-1][1]-40))
        .attr("width", 75)
@@ -530,7 +530,7 @@
   var origin_path = svg.selectAll(".jjjj")
       .data(path_shortest)
       .enter().append("image")
-      .attr("xlink:href", "http://freevector.co/wp-content/uploads/2009/11/21886-chicken-footprints1-200x200.png")
+      .attr("xlink:href", "footprint.png")
       .attr("x", function(d,i) {return d[0];})
       .attr("y", function(d,i) {return d[1]+20;})
       .attr("width", 25)
