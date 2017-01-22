@@ -1,166 +1,128 @@
-<!-- // to do
-// * get proejcted grid points defining map path -> grid - > only allow path within county & door always on border & outside water/sailboat & coundown/speed of chicken
-// change to map of france
-// http://bl.ocks.org/bycoffe/5575904
-// http://gregtrowbridge.com/a-basic-pathfinding-algorithm/
-// simulateneous transtions - chicken back and forth - simulate walking motion
- -->
+<!---*************************************************************************
 
+# Project:     the shortest path of escape #1
+# Date:        2016
 
+***************************************************************************-->
 <!DOCTYPE html>
 <meta charset="utf-8">
 
-<style>
+<!-- STYLE 
+...........................................................................--> 
+  <style>
 
-body 
-{ 
-  padding:0; 
-  position:absolute; 
-  width:100%; 
-  height:100%; 
-  overflow:hidden
-}
-</style>
+  body 
+  { 
+      padding:0; 
+      position:absolute; 
+      width:100%; 
+      height:100%; 
+      overflow:hidden
+  }
 
-<body>
-<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
-<script src="//d3js.org/topojson.v1.min.js"></script>
-<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+  </style>
 
-<script>
+<!-- DEPENDENCIES
+...........................................................................--> 
+  <body>
+  <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script src="//d3js.org/topojson.v1.min.js"></script>
+  <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
 
-  //////////////
-  // vis control parameters
-var margin = {top: 100, right: 100, bottom: 100, left: 100},
-    width = 2000,
-    height = 1300,
-    height_window = height + margin.top + margin.bottom,
-    width_window = width + margin.right + margin.left;
+<!-- MAIN JS CRIPT 
+...........................................................................--> 
+  <script>
 
-  //////////////
-  // control parameters
+  // Control Parameters & Set-up
+  ///////////////////////////////////////////////////////////////////////////
 
-  // vertical spacing - 1 unit
+  // core control parameters
+  var margin = {top: 100, right: 100, bottom: 100, left: 100},
+      width = 2000,
+      height = 1300,
+      height_window = height + margin.top + margin.bottom,
+      width_window = width + margin.right + margin.left;
+
+  // other control parameters
+
+  //// vertical spacing 
   var vert = 50;
   var row = height/vert;
 
-  // horizontal spacing - 1 unit
+  ////  horizontal spacing 
   var hor = 50;
   var col = width/hor;
 
-var step=hor;
+  //// other vars
+  var step=hor;
+  var s;
+  var poly=[];
+  var poly_comb=[];
+  var origin_coord;
+  var aim_coord;
+  var subunits;
+  var states;
+  var projection;
+  var ddd;
 
-  // grid
+
+  // generate grid
+
+  ////  grid
   var grid = [];
 
-  // ** generate grid
+  //// generate 
   for (i=margin.top;i<=(row*vert);) {
-  	var y=i;
-  	for (j=margin.left; j<=(col*hor);) {
-  		var x=j;
-  		var coord = [];
-  		coord = [x, y];
-  		grid.push(coord);
-  		j=j+hor;
-  	};
-  	i=i+vert;
+    var y=i;
+    for (j=margin.left; j<=(col*hor);) {
+      var x=j;
+      var coord = [];
+      coord = [x, y];
+      grid.push(coord);
+      j=j+hor;
+    };
+    i=i+vert;
   };
 
-
+  // control parameter
   var grid_count = grid.length;
 
 
-  //////////////////////////////////////////////////////////////////////////////////////
-  
-  //////////////
-  //// set-up
-  // var svg = d3.select("body").append("svg")
-  //     .attr("width", width)
-  //     .attr("height", height)
-  
+  // Page Intialisation
+  ///////////////////////////////////////////////////////////////////////////
+   
   var svg = d3.select("body").append("svg")
       .attr("viewBox", "0 0 " + width_window + " " + height_window)
       .attr("preserveAspectRatio", "xMidYMid meet")
       .attr("transform", "translate(" + margin.left+ "," + margin.top + ")")
       .style("background-color", 'black');
   
-  ///// draw grid
-  // var grid_point = svg.selectAll("circle")
-  //     .data(grid)
-  //     .enter().append("circle")
-  //     .attr("fill", "white")
-  //     .attr("r", 5)
-  //     .attr("cx", function(d,i) {return d[0];})
-  //     .attr("cy", function(d,i) {return d[1];});
-    //////////////
-  //// shortest path
 
-
-var s;
-
- var poly=[];
-
- var poly_comb=[];
-var origin_coord;
-  var aim_coord;
-
+  // Functions
+  ///////////////////////////////////////////////////////////////////////////
+   
+  // in_array()
   var in_array = function(selection, element) {
     for (k=0;k<selection.length; k++) {
       if (selection[k][0]==element[0] & selection[k][1]==element[1]) {
         return(true);
       };
 
-
     };
     return(false);
   };
-var subunits;
-var states;
-var projection;
-var ddd;
-  d3.json("fra.json", function(error, fra) {
-  if (error) return console.error(error);
-  console.log(fra);
-ddd=fra;
-var projection = d3.geo.albers()
-   .center([0,45])
-   .rotate([0, 0])
-   .parallels([50, 60])
-   .scale(6500)
-   .translate([width / 2, height / 1.8]);
 
-
-subunits = topojson.feature(fra, fra.objects.subunits);
-states = topojson.feature(fra, fra.objects.states);
-console.log(states);
-s=subunits;
-var subunits_data=subunits.features[0].geometry.coordinates;
-for (v=0; v<8; v++) {
-  var poly_temp=[];
-for (z=0; z<subunits_data[v][0].length;z++) {
-
-  poly_temp.push(projection(subunits_data[v][0][z]));
-}; 
-poly.push(poly_temp);
-};
-console.log(poly);
-// poly=[[0,0], [0,800], [800,800], [800,0]];
-
-poly_comb= poly.reduce(function(a, b) {
-  return a.concat(b);
-});
-console.log(poly_comb);
-
-var path_index = function(selection, element) {
+  // path_index()
+  var path_index = function(selection, element) {
     for (k=0;k<selection.length; k++) {
-          // console.log(selection[k][(selection[k].length-1)]);
       if (selection[k][(selection[k].length-1)][0]==element[0] & selection[k][(selection[k].length-1)][1]==element[1]) {
         return(selection[k]);
       };
     };
   };
 
+  // short_path()
   var short_path = function(start, end, grid_country) {
   
     // intiatilise 
@@ -177,10 +139,8 @@ var path_index = function(selection, element) {
 
       //update queue & active point & obtain shortest path to active loc
       active = queue[0];
-      // console.log(active);
       queue.splice(0,1);
       path = path_index(path_queue,active);
-      // console.log(path);
   
       // iterate
       active_queue=[];
@@ -190,39 +150,25 @@ var path_index = function(selection, element) {
       active_queue.push([active[0]-hor, active[1]]);
   
       for (j=0; j<active_queue.length; j++) {
-          // console.log(active_queue[j]);
-          //   console.log(in_array(grid_country,active_queue[j]));
         if(in_array(grid_country,active_queue[j] )) {
     
-      
-        // console.log(j);
-        
-
           if (!in_array(grid_visited, active_queue[j])) {
           path_queue.push(path.concat([active_queue[j]]));
           
     if (active_queue[j][0]==end[0] & active_queue[j][1]==end[1]) {
-      // console.log(path_queue[(path_queue.length-1)]);
           console.log("finished: " + active_queue[j]);
           return(path_queue[(path_queue.length-1)]);
         };
-  
-
           queue.push(active_queue[j]);
         };
         grid_visited.push(active_queue[j]);
-
-  
     }; };
       grid_visited.push(active);
-      // console.log(queue.length);
-      // console.log(grid_visited.length);
     };
   };
 
-var pointInPolygon = function (point, vs) {
-  // console.log(point);
-  // console.log(vs);
+  // pointInPolygon()
+  var pointInPolygon = function (point, vs) {
         // ray-casting algorithm based on
         // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
         var xi, xj, i, intersect,
@@ -238,64 +184,80 @@ var pointInPolygon = function (point, vs) {
               && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
           if (intersect) inside = !inside;
         }
-          // console.log(inside);
         return inside;
       };
 
+  // Map Intialisation
+  ///////////////////////////////////////////////////////////////////////////
+  d3.json("france_map.json", function(error, fra) {
+      if (error) return console.error(error);
+      ddd=fra;
 
-var path = d3.geo.path()
-   .projection(projection)
-   .pointRadius(2);
-
-
-
-// svg.append("path")
-//    .datum(subunits)
-//    .attr("d", path);
-
-// svg.append("path")
-//    .datum(states)
-//    .attr("d", path);
-
-var states_image = svg.selectAll(".subunit")
-   .data(topojson.feature(fra, fra.objects.subunits).features)
-   .enter().append("path")
-   .attr("d", path)
-   .attr("fill", "DarkRed");
+    var projection = d3.geo.albers()
+      .center([0,45])
+      .rotate([0, 0])
+      .parallels([50, 60])
+      .scale(6500)
+      .translate([width / 2, height / 1.8]);
 
 
+    subunits = topojson.feature(fra, fra.objects.subunits);
+    states = topojson.feature(fra, fra.objects.states);
+    s=subunits;
+    var subunits_data=subunits.features[0].geometry.coordinates;
+    for (v=0; v<8; v++) {
+       var poly_temp=[];
+        for (z=0; z<subunits_data[v][0].length;z++) {
+          poly_temp.push(projection(subunits_data[v][0][z]));
+        }; 
+      poly.push(poly_temp);
+    };
 
-grid_country_old=[];
+    poly_comb= poly.reduce(function(a, b) {
+      return a.concat(b);
+    });
 
-for(l=0; l<grid.length; l++) {
-poly_temp=[];
-point=grid[l];
-for (k=0; k<poly.length; k++) {
-             poly_temp.push(pointInPolygon(point,poly[k]));
-            };
- poly_temp_assess=poly_temp.some(elem => elem==true);
+  var path = d3.geo.path()
+    .projection(projection)
+    .pointRadius(2);
 
-if(poly_temp_assess==true ) {
-  grid_country_old.push(point);
-};
-};
+  var states_image = svg.selectAll(".subunit")
+     .data(topojson.feature(fra, fra.objects.subunits).features)
+     .enter().append("path")
+     .attr("d", path)
+    .attr("fill", "DarkRed");
 
-obstacles = [];
-obstacles_count=70;
-for(o=0;o<obstacles_count; o++) {
+  grid_country_old=[];
 
-  point= grid_country_old[Math.round(Math.random()*(grid_country_old.length-1))];
-  if(typeof point!="undefined") {
-  obstacles.push(point);
-};
-};
+  for(l=0; l<grid.length; l++) {
+    poly_temp=[];
+    point=grid[l];
+    for (k=0; k<poly.length; k++) {
+        poly_temp.push(pointInPolygon(point,poly[k]));
+    };
+    poly_temp_assess=poly_temp.some(elem => elem==true);
 
-grid_country = $(grid_country_old).not(obstacles).get();
+    if(poly_temp_assess==true ) {
+      grid_country_old.push(point);
+    };
+  };
 
-grid_non_country = $(grid).not(grid_country_old).get();
+  obstacles = [];
+  obstacles_count=70;
+ 
+  for(o=0;o<obstacles_count; o++) {
+    point= grid_country_old[Math.round(Math.random()*(grid_country_old.length-1))];
+    if(typeof point!="undefined") {
+       obstacles.push(point);
+    };
+  };
+
+  grid_country = $(grid_country_old).not(obstacles).get();
+
+  grid_non_country = $(grid).not(grid_country_old).get();
 
   // orign & end point
- origin_coord = grid_country[Math.round(Math.random()*(grid_country.length-1))];
+  origin_coord = grid_country[Math.round(Math.random()*(grid_country.length-1))];
 
  aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
  aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
@@ -303,69 +265,55 @@ grid_non_country = $(grid).not(grid_country_old).get();
  dest_coord = grid_non_country[Math.round(Math.random()*(grid_country.length-1))];
 
 
-while(!in_array(grid_country, aim_coord)) {
+  while(!in_array(grid_country, aim_coord)) {
 
-   aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
- aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
+    aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
+    aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
+  };
 
-};
-
-while(Math.abs(dest_coord[0]-aim_coord[0])<600 | Math.abs(dest_coord[1]-aim_coord[1])<600) {
- dest_coord = grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
-
-};
+  while(Math.abs(dest_coord[0]-aim_coord[0])<600 | Math.abs(dest_coord[1]-aim_coord[1])<600) {
+    dest_coord = grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
+  };
 
   console.log("start: " + origin_coord);
   console.log("end: " + aim_coord);
-
   console.log("dest: " + dest_coord);
 
-   
-
-  
-  //////////////
-  //// transition
+  // Transition
+  ///////////////////////////////////////////////////////////////////////////
   path_shortest=short_path(origin_coord, aim_coord,grid_country=grid_country );
-  // console.log("hkjh");
   while(typeof path_shortest == 'undefined') {
-console.log("repeat");
     obstacles = [];
-obstacles_count=50;
-for(o=0;o<obstacles_count; o++) {
+    obstacles_count=50;
+    
+    for(o=0;o<obstacles_count; o++) {
+      point= grid_country_old[Math.round(Math.random()*(grid_country_old.length-1))];
+      obstacles.push(point);
+    };
 
-  point= grid_country_old[Math.round(Math.random()*(grid_country_old.length-1))];
-  obstacles.push(point);
-};
+    grid_country = $(grid_country_old).not(obstacles).get();
+    origin_coord = grid_country[Math.round(Math.random()*(grid_country.length-1))];
 
-grid_country = $(grid_country_old).not(obstacles).get();
-
-  // orign & end point
- origin_coord = grid_country[Math.round(Math.random()*(grid_country.length-1))];
-
- aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
- aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
- path_shortest=short_path(origin_coord, aim_coord, grid_country=grid_country);
+    aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
+    aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
+    path_shortest=short_path(origin_coord, aim_coord, grid_country=grid_country);
   };
-    console.log("hkjh");
-  // path_shortest.splice((path_shortest.length-1), 1);
-  console.log("hkjh");
- 
- console.log(aim_coord);
+
+  console.log(aim_coord);
   console.log(dest_coord);
 
-   path_shortest_sail=short_path(aim_coord, dest_coord, grid_country=grid_non_country);
+  path_shortest_sail=short_path(aim_coord, dest_coord, grid_country=grid_non_country);
 
 
   while(typeof path_shortest_sail == 'undefined') {
- dest_coord = grid_non_country[Math.round(Math.random()*(grid_country.length-1))];
-while(Math.abs(dest_coord[0]-aim_coord[0])<600 | Math.abs(dest_coord[1]-aim_coord[1])<600) {
- dest_coord = grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
+    dest_coord = grid_non_country[Math.round(Math.random()*(grid_country.length-1))];
+    while(Math.abs(dest_coord[0]-aim_coord[0])<600 | Math.abs(dest_coord[1]-aim_coord[1])<600) {
+      dest_coord = grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
+    };
+  };
 
-};
-};
 
-
-svg.selectAll(".dddd")
+  svg.selectAll(".dddd")
     .data( obstacles)
       .enter().append("image")
       .attr("xlink:href", "https://openclipart.org/image/2400px/svg_to_png/219912/strike_worker.png")
@@ -374,8 +322,6 @@ svg.selectAll(".dddd")
       .attr("width", 50)
       .attr("height", 50);
   
-   console.log("hkjh");
-
     var origin = svg.append("image")
       .attr("xlink:href", "chicken.png")
       .attr("x", (origin_coord[0]))
@@ -383,8 +329,7 @@ svg.selectAll(".dddd")
       .attr("width", 100)
       .attr("height", 100);
   
-  var aim = svg.append("image")
-      // .attr("xlink:href", "http://blogs.gartner.com/hank-barnes/files/2015/05/door_white_open_skies.png")
+    var aim = svg.append("image")
       .attr("xlink:href", "Untitled.png")
       .attr("x", (aim_coord[0]-50))
       .attr("y", (aim_coord[1]-50))
@@ -392,187 +337,140 @@ svg.selectAll(".dddd")
       .attr("height", 150);
  
 
-  // var grid_point = svg.selectAll(".mmmm")
-  //     .data(  path_shortest)
-  //     .enter().append("circle")
-  //     .attr("fill", "yellow")
-  //     .attr("r", 5)
-  //     .attr("cx", function(d,i) {return d[0];})
-  //     .attr("cy", function(d,i) {return d[1];});
+    var freedom=function (path) {
 
+      states_image.style("fill", "beige");
 
-var freedom=function (path) {
+      svg.style("background-color", 'darkblue');
 
-console.log(path);
-states_image.style("fill", "beige");
+      var dest = svg.append("image")
+        .attr("xlink:href", "http://vignette2.wikia.nocookie.net/clubpenguin/images/f/f3/Desert_Island.PNG/revision/latest?cb=20141120022620")
+        .attr("x", (dest_coord[0]-50))
+        .attr("y", (dest_coord[1]-50))
+        .attr("width", 100)
+        .attr("height", 100);
 
-svg.style("background-color", 'darkblue');
+      var origin_new = svg.append("g");
 
-  var dest = svg.append("image")
-      .attr("xlink:href", "http://vignette2.wikia.nocookie.net/clubpenguin/images/f/f3/Desert_Island.PNG/revision/latest?cb=20141120022620")
-      .attr("x", (dest_coord[0]-50))
-      .attr("y", (dest_coord[1]-50))
-      .attr("width", 100)
-      .attr("height", 100);
+      var origin_new_new = origin_new.append("image")
+       .attr("xlink:href", "http://4vector.com/i/free-vector-sailing-boat-clip-art_107845_Sailing_Boat_clip_art_hight.png")
+       .attr("x", (path[path.length-1][0]-40))
+       .attr("y", (path[path.length-1][1]-40))
+       .attr("width", 75)
+       .attr("height", 75)
+       .call(sail_move);
 
-var origin_new = svg.append("g");
-  // .call(sail_move);
+     // Waves & Sailing
+    ///////////////////////////////////////////////////////////////////////////
 
-var origin_new_new = origin_new.append("image")
-      .attr("xlink:href", "http://4vector.com/i/free-vector-sailing-boat-clip-art_107845_Sailing_Boat_clip_art_hight.png")
-      .attr("x", (path[path.length-1][0]-40))
-      .attr("y", (path[path.length-1][1]-40))
-      .attr("width", 75)
-      .attr("height", 75)
-      .call(sail_move);
+      sin_path_1=[];
+      sin_path_2=[];
+      sin_path_3=[];
+      sin_path_4=[];
+      sin_path_5=[];
+      sin_path_6=[];
+      sin_path_7=[];
+      sin_path_8=[];
+      sin_path_9=[];
+     sin_path_10=[];
 
+     sin_path_list=[sin_path_1, sin_path_2, sin_path_3, sin_path_4, sin_path_5, sin_path_6, sin_path_7, sin_path_8, sin_path_9, sin_path_10];
 
-sin_path_1=[];
-sin_path_2=[];
-sin_path_3=[];
-sin_path_4=[];
-sin_path_5=[];
-sin_path_6=[];
-sin_path_7=[];
-sin_path_8=[];
-sin_path_9=[];
-sin_path_10=[];
+     var lineFunction = d3.svg.line()
+      .x(function(d) { return d[0]; })
+      .y(function(d) { return d[1]; })
+      .interpolate("basis");
 
-sin_path_list=[sin_path_1, sin_path_2, sin_path_3, sin_path_4, sin_path_5, sin_path_6, sin_path_7, sin_path_8, sin_path_9, sin_path_10];
- 
+    for(j=0; j<6; j++) {
+      var try_count=1;
+      var sin_coord=[];
+      var wave_position=grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
+      while((wave_position[0]>=width) | ((width-wave_position[0])<=50) | (wave_position[1]>=height) | 
+        ((height-wave_position[1])<=50) ) {
+            var wave_position=grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
+      };
+    var wave_position_x=wave_position[0];
+    var wave_position_y=wave_position[1];
+    var wave_length=Math.round(Math.random()*400);
+    while(wave_length<200) {
+       var wave_length=Math.round(Math.random()*400);
+    };
 
-  var lineFunction = d3.svg.line()
-.x(function(d) { return d[0]; })
-.y(function(d) { return d[1]; })
-.interpolate("basis");
+    var wave_start = [(Math.ceil((wave_position_x)/step) * step),(Math.ceil(wave_position_y/step) * step) ];
+    var wave_end = [(Math.ceil((wave_position_x+(wave_length))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
+    console.log(in_array(grid_non_country, wave_start ));
 
-for(j=0; j<6; j++) {
- var try_count=1;
-var sin_coord=[];
-  // 
-var wave_position=grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
-while((wave_position[0]>=width) | ((width-wave_position[0])<=50) | (wave_position[1]>=height) | 
-  ((height-wave_position[1])<=50) ) {
-  var wave_position=grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
-};
-// console.log(in_array(grid_non_country, wave_position ));
-var wave_position_x=wave_position[0];
-// console.log(wave_position_x);
-var wave_position_y=wave_position[1];
- // console.log(wave_position_y);
-var wave_length=Math.round(Math.random()*400);
- // console.log(wave_length);
- while(wave_length<200) {
-  var wave_length=Math.round(Math.random()*400);
- // console.log(wave_length);
-};
-
-var wave_start = [(Math.ceil((wave_position_x)/step) * step),(Math.ceil(wave_position_y/step) * step) ];
- // console.log(wave_start);
-var wave_end = [(Math.ceil((wave_position_x+(wave_length))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
- // console.log(wave_end);
-console.log(in_array(grid_non_country, wave_start ));
-
-while(!in_array(grid_non_country, wave_end)) {
-  // console.log("repeat");
-var wave_position_x=wave_position_x-(step*try_count);
-// console.log(wave_position_x);
-
-var wave_start = [(Math.ceil((wave_position_x)/step) * step),(Math.ceil(wave_position_y/step) * step) ];
- // console.log(wave_start);
-var wave_end = [(Math.ceil((wave_position_x+(wave_length/2))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
- // console.log(wave_end);
-
-try_count=try_count+1;
-};
-
-// while(in_array(grid_country, wave_end) | in_array(grid_country, wave_end)) {
-//   // console.log("repeat");
-// var wave_position_x=wave_position_x-(step*try_count);
-// // console.log(wave_position_x);
-
-// var wave_start = [(Math.ceil((wave_position_x-(wave_length/2))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
-//  // console.log(wave_start);
-// var wave_end = [(Math.ceil((wave_position_x+(wave_length/2))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
-//  // console.log(wave_end);
-
-// try_count=try_count+1;
-// };
-
- // console.log("final" + wave_start + " " +wave_end);
- // console.log(in_array(grid_non_country, wave_start ));
- // console.log(in_array(grid_non_country, wave_end ));
+    while(!in_array(grid_non_country, wave_end)) {
+      var wave_position_x=wave_position_x-(step*try_count);
+      var wave_start = [(Math.ceil((wave_position_x)/step) * step),(Math.ceil(wave_position_y/step) * step) ];
+      var wave_end = [(Math.ceil((wave_position_x+(wave_length/2))/step) * step),(Math.ceil(wave_position_y/step) * step) ];
+      try_count=try_count+1;
+    };
 
     for (i = 0; i <= (wave_end[0]-wave_start[0]); i += 20) {
- sin_coord.push([i+wave_start[0], (Math.sin(i)*8)+ wave_position_y]);
-  // console.log(in_array(grid_non_country,([i+wave_start[0], (Math.sin(i)*10)+ wave_position_y]) ));
+        sin_coord.push([i+wave_start[0], (Math.sin(i)*8)+ wave_position_y]);
     }
 
-var in_country=[];
-for (h=0; h< sin_coord.length; h++) {
-   in_country.push(pointInPolygon(sin_coord[h], poly_comb)); 
-   if (pointInPolygon(sin_coord[h], poly_comb)==true) {
-    console.log(sin_coord[h]);
-   };
-};
+    var in_country=[];
+    for (h=0; h< sin_coord.length; h++) {
+      in_country.push(pointInPolygon(sin_coord[h], poly_comb)); 
+      if (pointInPolygon(sin_coord[h], poly_comb)==true) {
+           console.log(sin_coord[h]);
+      };
+    };
 
-in_country_assess=in_country.some(elem => elem==true);
-console.log("wave" +j);
-console.log(in_country);
-console.log(in_country_assess);
+    in_country_assess=in_country.some(elem => elem==true);
 
-if (in_country_assess== false) {
-sin_path_list[j]=svg.append("path")
-.attr("d", lineFunction(sin_coord))
-.attr("stroke", "white")
-.attr("stroke_width", 3)
-.attr("fill", "none")
-.attr("stroke-dasharray", "10 10")
-.attr("stroke-dashoffset", "10");
+    if (in_country_assess== false) {
+      sin_path_list[j]=svg.append("path")
+      .attr("d", lineFunction(sin_coord))
+      .attr("stroke", "white")
+      .attr("stroke_width", 3)
+      .attr("fill", "none")
+      .attr("stroke-dasharray", "10 10")
+      .attr("stroke-dashoffset", "10");
 
-var repeat_wave=function(sin_path_name) {
+    var repeat_wave=function(sin_path_name) {
  
-    sin_path_name.transition()
-        .duration(100)
-        .attr("stroke-dashoffset", function() {return Number(sin_path_name.attr("stroke-dashoffset"))+5;})
+        sin_path_name.transition()
+          .duration(100)
+          .attr("stroke-dashoffset", function() {return Number(sin_path_name.attr("stroke-dashoffset"))+5;})
           .each("end", function() {
-         m=m+1;
-          if(m<(10000)) {repeat_wave(sin_path_name);};
-          if(m==(10000-1)) {
-            console.log("wave");}});
+             m=m+1;
+            if(m<(10000)) {repeat_wave(sin_path_name);};
+            if(m==(10000-1)) {
+              console.log("wave");}});
+    };
+  
+    m=1;
+
+    sin_path_list[j].transition()
+      .duration(100)
+      .attr("stroke-dashoffset", function() {return Number(sin_path_list[j].attr("stroke-dashoffset"))+5;})
+      .each("end", repeat_wave(sin_path_list[j]))
 
   };
 
-  m=1;
+  };
+  };
 
-sin_path_list[j].transition()
-.duration(100)
-.attr("stroke-dashoffset", function() {return Number(sin_path_list[j].attr("stroke-dashoffset"))+5;})
-.each("end", repeat_wave(sin_path_list[j]))
-
- };
-
-};
-};
-
-function sail_move(selection) {
+  function sail_move(selection) {
       n=1;
       rot=1;
 
     function rotTween() {
-    var i = d3.interpolate(0, 20*rot);
-    rot=rot*-1;
-    var varx= selection.attr("x");
-    // console.log(varx);
-        varx=Number(varx)+10;
-            // console.log(varx);
-    var vary= selection.attr("y");
-  vary=Number(vary)+10;
-    return function(t) {
+      var i = d3.interpolate(0, 20*rot);
+      rot=rot*-1;
+      var varx= selection.attr("x");
+      varx=Number(varx)+10;
+      var vary= selection.attr("y");
+      vary=Number(vary)+10;
+      return function(t) {
         return "rotate(" + i(t) + "," + varx + ","+ vary+")";
+      };
     };
-};
-var repeat=function() {
+
+    var repeat=function() {
  
     selection.transition()
         .duration(500)
@@ -582,43 +480,27 @@ var repeat=function() {
         .attrTween("transform", rotTween)
         .each("end", function() {
           n=n+1;
-          // console.log(n);
           if(n<(path_shortest_sail.length-3)) {repeat();};
           if(n==(path_shortest_sail.length-3)) {
             console.log("freedom");}});
 
+     };
+
+  selection.transition()
+    .duration(500)
+    .delay(500)
+    .ease("linear")
+    .attr("x", path_shortest_sail[(1)][0]-40)
+    .attr("y", path_shortest_sail[(1)][1]-40)
+    .attrTween("transform", rotTween)
+    .each("end", repeat);
+
   };
-
-selection.transition()
-.duration(500)
-.delay(500)
-.ease("linear")
-.attr("x", path_shortest_sail[(1)][0]-40)
-.attr("y", path_shortest_sail[(1)][1]-40)
-.attrTween("transform", rotTween)
-.each("end", repeat);
-
-// setTimeout(function() { sail_move(selection); }, (Math.random() + 1) * 10000);
-
-};
   
 
-// function sail_rotate(selection) {
-// var varx= selection.attr("x")
-// var vary= selection.attr("y")
-//   selection.transition()
-//   .duration(5000)
-//   // .attr("transform", "translate(" +(path[path.length-1][0]-40)+","+ (path[path.length-1][1]-40)+") rotate(180,0,0)");
-//   .attrTween("transform", rotTween);
 
-
-//   };
-// setTimeout(function() { sail_rotate(selection); }, (Math.random() + 1) * 1000);
-
-
-
-n=1;
-var repeat=function() {
+  n=1;
+  var repeat=function() {
  
     origin.transition()
         .duration(500)
@@ -627,7 +509,6 @@ var repeat=function() {
         .attr("y", path_shortest[(1+n)][1]-40)
         .each("end", function() {
           n=n+1;
-          // console.log(n);
           if(n<(path_shortest.length-1)) {repeat();};
           if(n==(path_shortest.length-1)) {
             origin.transition()
@@ -638,17 +519,17 @@ var repeat=function() {
 
   };
 
-origin.transition()
-.duration(500)
-.delay(500)
-.ease("linear")
-.attr("x", path_shortest[(1)][0]-40)
-.attr("y", path_shortest[(1)][1]-40)
-.each("end", repeat);
+  origin.transition()
+  .duration(500)
+  .delay(500)
+  .ease("linear")
+  .attr("x", path_shortest[(1)][0]-40)
+  .attr("y", path_shortest[(1)][1]-40)
+  .each("end", repeat);
   
-var origin_path = svg.selectAll(".jjjj")
-  .data(path_shortest)
-     .enter().append("image")
+  var origin_path = svg.selectAll(".jjjj")
+      .data(path_shortest)
+      .enter().append("image")
       .attr("xlink:href", "http://freevector.co/wp-content/uploads/2009/11/21886-chicken-footprints1-200x200.png")
       .attr("x", function(d,i) {return d[0];})
       .attr("y", function(d,i) {return d[1]+20;})
@@ -656,14 +537,14 @@ var origin_path = svg.selectAll(".jjjj")
       .attr("height", 25)
       .attr("opacity", 0);
 
-origin_path.transition()
-.delay(function(d,i) {return(550+500*i);})
-.style("opacity",  1)  ;
+  origin_path.transition()
+    .delay(function(d,i) {return(550+500*i);})
+    .style("opacity",  1)  ;
 
 });
 
-  
-  //////////////
-  //// origin and end point
-    //////////////////////////////////////////////////////////////////////////////////////
 </script>
+</body>
+</html>
+
+<!-- *************************         END         ************************** -->
