@@ -34,11 +34,14 @@
 ...........................................................................--> 
   <script>
 
+
+  var main_draw = function() {
+
   // Control Parameters & Set-up
   ///////////////////////////////////////////////////////////////////////////
 
   // core control parameters
-  var margin = {top: 100, right: 100, bottom: 100, left: 100},
+  var margin = {top: 100, right: 100, bottom: 200, left: 200},
       width = 2000,
       height = 1300,
       height_window = height + margin.top + margin.bottom,
@@ -266,7 +269,6 @@
 
 
   while(!in_array(grid_country, aim_coord)) {
-
     aim_coord= poly_comb[Math.round(Math.random()*(poly_comb.length-1))];
     aim_coord = [(Math.ceil(aim_coord[0]/step) * step),(Math.ceil(aim_coord[1]/step) * step) ];
   };
@@ -283,6 +285,7 @@
   ///////////////////////////////////////////////////////////////////////////
   path_shortest=short_path(origin_coord, aim_coord,grid_country=grid_country );
   while(typeof path_shortest == 'undefined') {
+    console.log("re-position obstacles - no path");
     obstacles = [];
     obstacles_count=50;
     
@@ -302,15 +305,32 @@
   console.log(aim_coord);
   console.log(dest_coord);
 
-  path_shortest_sail=short_path(aim_coord, dest_coord, grid_country=grid_non_country);
+var main_sail = function () {
+path_shortest_sail=short_path(aim_coord, dest_coord, grid_country=grid_non_country);
+console.log("re-ddd island (no path)");
 
 
-  while(typeof path_shortest_sail == 'undefined') {
+setTimeout(function(){
+    control = false;
+    if (typeof path_shortest_sail == 'undefined') {
+          console.log("timeout break - restarting");
+          d3.select("svg").remove();
+             console.log("timeout break - clear");
+      main_draw();
+    };
+}, 100); 
+
+var control = true;
+while(control==false & typeof path_shortest_sail == 'undefined')
+{
+  console.log(control);
+  console.log('re-position island  - no path');
     dest_coord = grid_non_country[Math.round(Math.random()*(grid_country.length-1))];
     while(Math.abs(dest_coord[0]-aim_coord[0])<600 | Math.abs(dest_coord[1]-aim_coord[1])<600) {
       dest_coord = grid_non_country[Math.round(Math.random()*(grid_non_country.length-1))];
     };
   };
+
 
 
   svg.selectAll(".dddd")
@@ -541,7 +561,19 @@
     .delay(function(d,i) {return(550+500*i);})
     .style("opacity",  1)  ;
 
+};
+
+
+//call main function
+main_sail();
+
 });
+
+};
+
+
+//call main function
+main_draw();
 
 </script>
 </body>
