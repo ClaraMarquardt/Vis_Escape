@@ -1,0 +1,571 @@
+<!/*Next steps:
+* Impose grid -- generate set of focal points for each digit --- look at potentially using grig points https://github.com/MoritzStefaner/gridexperiments/blob/master/index.html -- start chicken at random points & impsoe focal points on grid -- forced to move alongside grod
+* Implement count down to determine number
+* Images -- randomise so that only some chicken // radius, etc. so that collision works equally well with images (e.g. not square but transparent background images) // number, etc.
+* Interactivity --- exploit temporality of changing cluster focus --- (a) rather than dragging -- upon click  - change cluster focus (rather than individual point, i.e. currently change cluster focus for an individual point) -- do this by using links which are shortened over time -- move all towards mouse & at mouse create seeds
+* Think about exxample of mouse & invisible node with large charge -- e.g. hercules ficgure 
+* Make screen responsive
+* Look through force layout tutorial to understand basics
+
+***** Q
+* alpha - blend forces - how exactly
+* look over entire code -- eg. || for if loop
+* e.g. example of neatly separating by splitting focal points then combining focal points again
+* action riggers -- time setout does not work with dragstart
+* recreate map --- germany --  split based on ethnic differences --- impose line differences which are related to the gap in the racial ratios betwen cities http://vallandingham.me/abusing_the_force.html
+
+*/
+
+
+/*Insights:
+* fixed focal group -- cluster assignment relevant only in addigning focal point // cluster centres irrelevant
+* physical simulation  tick function runs at each iteration until alpha becomes small enough that stop --- tick (a) functions that manipulate d.x then update d.cx so that store updated position --- forces (a) gravity pull towards focal point (or cluster centre) (b) collision detection ... can here also defeine other forces e.g. sort by layer && standard forces gravity (pull towards centre vs. not linked to size) // charge (attract/repel) & friction (automatic)
+* alpha -- used to blend forces 
+* use force layout (a) for network layout complex vs. (b) for convenient placing of nodes -- abuse force talk
+* obama campaign talk - woo effect not enough - only woo effect that is wroth it is when makes someones live easier
+* talk on embedding meta data (lines to select points & phone size)
+* R package for caterpillar plots (ala barplots) & segement plots  -- use to misx up bar plots!>
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Forces and grids</title>
+    <script type="text/javascript" src="d3.min.js"></script>
+    <script type="text/javascript" src="d3.layout.min.js"></script>
+    <script type="text/javascript" src="d3.geom.min.js"></script>
+    <script type="text/javascript" src="underscore-min.js"></script>
+    <script src="jquery-1.7.2.min.js" charset="utf-8">
+      
+    </script>
+    <style type="text/css" media="screen">
+      .menu{
+        position:absolute;
+        top :20px;
+        right:20px;
+      }
+    </style>  
+  </head>
+  <body>
+    <script type="text/javascript" charset="utf-8">
+      var w = 700, h = 700;
+      var vis = d3.select("body").append("svg:svg").attr("width", w).attr("height", h).style("background-color", 'white');;
+      var background = vis.append("g");
+      var nodes = [];
+      var links = [];
+      var USE_GRID = true;
+      
+      var GRID_SIZE = 60;
+      
+      var GRID_TYPE = "HEXA";
+      
+      // set up event handlers
+      $(document).ready(function(){
+        $("#USE_GRID").click(
+          function(){
+            USE_GRID = $(this).is(":checked");
+            $(this).blur();
+            force.start();
+          }
+        );
+        
+        
+        //$("#CELL_SIZE").rangeinput();
+        $("#CELL_SIZE").bind("change", 
+          function(){
+            console.log($(this).attr("value"));
+            GRID_SIZE = $(this).attr("value");
+            grid.init();
+            force.start();
+          }
+        );
+        
+        $("[name=GRID_TYPE]").click( 
+          function(){
+            GRID_TYPE = $(this).attr("value");
+            grid.init();
+            force.start();
+          }
+        );
+      });
+      for(var i = 0; i < 1; i++) {
+        var node = {
+          label : "node " + i
+        };
+        nodes.push(node);
+      };
+      for(var i = 0; i < nodes.length; i++) {
+        for(var j = 0; j < i; j++) {
+          if(Math.random() > .99-Math.sqrt(i)*.02)
+            links.push({
+              source : i,
+              target : j,
+              weight :1
+            });
+        }
+      };
+      var force = d3.layout.force().size([w, h]).nodes(nodes).links(links).gravity(0.5).linkDistance(function(d){return (1-d.weight)*100}).charge(-3000).linkStrength(function(x) {
+        return x.weight * 2
+      });
+      force.start();
+      var link = vis.selectAll("line.link").data(links).enter().append("svg:line").attr("class", "link").style("stroke-width", 1).style("stroke", "black").style("opacity", function(d){return d.weight*.7});
+      // var node = vis.selectAll("g.node").data(force.nodes()).enter().append("g").attr("class", "node");
+      // node.append("circle").attr("r", 6).style("fill", "#555").style("stroke", "#FFF").style("stroke-width", "4px");
+      // node.call(force.drag);
+      // node.append("image")
+      // .attr("xlink:href", "http://www.clker.com/cliparts/2/g/U/e/e/P/black-eating-chicken-md.png")
+      // .attr("width", 10)
+      // .attr("height", 10);
+
+var node = vis.selectAll("circle")
+    .data(force.nodes())
+  .enter().append("svg:g")
+      .call(force.drag);
+
+node.append("svg:image")
+      .attr("xlink:href", "http://www.nivel7siete.com/images/white-chicken.png")
+      // .attr("x", 100)
+      // .attr("y", 100)
+      .attr("width", function() { return 20*Math.max(0.5,Math.random())*2;})
+      .attr("height", function() { return 20*Math.max(0.5,Math.random())*2;});
+
+      
+      var updateLink = function() {
+        this.attr("x1", function(d) {
+          return d.source.screenX;
+        }).attr("y1", function(d) {
+          return d.source.screenY;
+        }).attr("x2", function(d) {
+          return d.target.screenX;
+        }).attr("y2", function(d) {
+          return d.target.screenY;
+        });
+      }
+      var updateNode = function() {
+        this.attr("transform", function(d) {
+          if(USE_GRID) {
+            var gridpoint = grid.occupyNearest(d);
+            if(gridpoint) {
+              d.screenX = d.screenX || gridpoint.x;             
+              d.screenY = d.screenY || gridpoint.y;                           
+              d.screenX += (gridpoint.x - d.screenX) * .2;
+              d.screenY += (gridpoint.y - d.screenY) * .2;
+              
+              d.x += (gridpoint.x - d.x) * .05;
+              d.y += (gridpoint.y - d.y) * .05;
+            }
+          } else {
+            d.screenX = d.x;
+            d.screenY = d.y;
+          }
+          return "translate(" + d.screenX + "," + d.screenY + ")";
+        });
+      };
+      var grid = function(width, height) {
+        return {
+          cells : [],
+          init : function() {
+            this.cells = [];
+            for(var i = 0; i < width / GRID_SIZE; i++) {
+              for(var j = 0; j < height / GRID_SIZE; j++) {
+                // HACK: ^should be a better way to determine number of rows and cols
+                var cell;
+                switch (GRID_TYPE) {
+                  case "PLAIN":
+                    cell = {
+                      x : i * GRID_SIZE,
+                      y : j * GRID_SIZE
+                    };
+                    break;
+                  case "SHIFT_ODD_ROWS":
+                    cell = {
+                      x : i * GRID_SIZE,
+                      y : 1.5 * (j * GRID_SIZE + (i % 2) * GRID_SIZE * .5)
+                    };
+                    break;
+                  case "HEXA":
+                    cell = {
+                      x : i * GRID_SIZE + (j % 2) * GRID_SIZE * .5,
+                      y : j * GRID_SIZE * .85
+                    };
+                    break;
+                }
+                this.cells.push(cell);
+                
+              };
+            };
+          },
+          sqdist : function(a, b) {
+            return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
+          },
+          occupyNearest : function(p) {
+            var minDist = 1000000;
+            var d;
+            var candidate = null;
+            for(var i = 0; i < this.cells.length; i++) {
+              if(!this.cells[i].occupied && ( d = this.sqdist(p, this.cells[i])) < minDist) {
+                minDist = d;
+                candidate = this.cells[i];
+              }
+            }
+            if(candidate)
+              candidate.occupied = true;
+            return candidate;
+          }
+        }
+      }(w, h);
+      force.on("tick", function() {
+        vis.select("g.gridcanvas").remove();
+        if(USE_GRID) {
+          grid.init();
+          var gridCanvas = vis.append("svg:g").attr("class", "gridcanvas");
+          _.each(grid.cells, function(c) {
+            gridCanvas.append("svg:circle").attr("cx", c.x).attr("cy", c.y).attr("r", 2).style("fill", "black").style("opacity", .3);
+          });
+        }
+        node.call(updateNode);
+        link.call(updateLink);
+      });
+    </script>
+    <div class="menu">
+      <div>
+        <input type="checkbox" id="USE_GRID" checked>use grid</input>   
+      </div>
+      <div>
+        <input type="range" min="30" step="10" max="150" id="CELL_SIZE" value="60"></input>
+      </div>
+      <div>
+        <input type="radio" name="GRID_TYPE" value="PLAIN">plain</input>
+        <input type="radio" name="GRID_TYPE" value="SHIFT_ODD_ROWS">Shift odd rows</input>
+        <input type="radio" name="GRID_TYPE" value="HEXA" checked>Hexa</input>                
+      </div>
+    </div>
+  </body>
+</html>
+
+
+
+<!-- 
+
+
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<body>
+<script src="//d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+var width = 3000,
+    height = 1000,
+    padding = 4, // separation between same-color nodes
+    clusterPadding = 4, // separation between different-color nodes
+    maxRadius = 5;
+
+var n = 70, // total number of nodes
+    m = 30; // number of distinct clusters
+
+var x_cor=[];
+for (i = 0; i < 21; i++) {
+x_cor.push(400);}
+for (i = 0; i < 11; i++) {
+x_cor.push(400-i*10);}
+
+var y_cor=[]
+for (i = 0; i < 21; i++) {
+y_cor.push(25*20-i*25);}
+
+for (i = 0; i < 11; i++) {
+y_cor.push(i*15);}
+
+var color = d3.scale.category10()
+    .domain(d3.range(m));
+
+// The largest node for each cluster.
+var clusters = new Array(m);
+
+var nodes = d3.range(n).map(function() {
+  var i = Math.floor(Math.random() * m),
+      r = Math.random() * maxRadius,
+      f = {
+        cluster: i,
+        radius: r,
+        cx: Number(x_cor[i]) ,
+        cy: Number(y_cor[i])
+      };
+  
+  if (!clusters[i] || (r > clusters[i].radius)) {
+
+    f= {
+        cluster: i,
+        radius: 5,
+        cx: Number(x_cor[i]) ,
+        cy: Number(y_cor[i])
+      }
+ clusters[i]=f
+    
+  };
+  return f;
+});
+
+
+
+// var dataLinks = [
+//         { source: 0, target: 1},
+//         { source: 0, target: 2},
+//         { source: 0, target: 3}
+//     ];
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+   .style("background-color", 'black');
+
+svg.on("click", dragclick);
+
+// links = svg.selectAll('.link')
+//         .data(dataLinks)
+//         .enter().append('line')
+//         .attr('class', 'link')
+//         .attr('x1', function(d) { return nodes[d.source].cx; })
+//         .attr('y1', function(d) { return nodes[d.source].cy; })
+//         .attr('x2', function(d) { return nodes[d.target].cx; })
+//         .attr('y2', function(d) { return nodes[d.target].cy; });
+//         // .width()
+//         // .colour();
+
+var force = d3.layout.force()
+    .nodes(nodes)
+    .size([width, height])
+    .gravity(0.0001)
+    .charge(0)
+    // .links(dataLinks)
+    // .linkDistance(height/100)
+    .on("tick", tick)
+    .start();
+
+var drag = force.drag()
+    .on("dragend", dragend);
+
+
+// var circle = svg.selectAll("circle")
+//     .data(nodes)
+//   .enter().append("circle")
+//     .style("fill", function(d, i) { 
+//       if(i==0) {return "black"} else {return color(Math.floor(Math.random() * m))}; })
+//     .on("dblclick", dblclick)
+//       .call(drag);
+
+var circle = svg.selectAll("circle")
+    .data(nodes)
+  .enter().append("g")
+    .on("dblclick", dblclick)
+      .call(drag);
+
+circle.append("image")
+      .attr("xlink:href", "http://www.nivel7siete.com/images/white-chicken.png")
+      .attr("x", 100)
+      .attr("y", 100)
+      .attr("width", 20)
+      .attr("height", 20);
+
+circle.transition()
+    .duration(2000)
+    .delay(function(d, i) { return i * 5; })
+    .attrTween("r", function(d) {
+      var i = d3.interpolate(0, d.radius);
+      return function(t) { return d.radius = i(t); };
+    });
+
+// function tick(e) {
+//   node
+//       .each(cluster(30 * e.alpha * e.alpha))
+//       .each(collide(.5))
+//       .attr("cx", function(d) { return d.x; })
+//       .attr("cy", function(d) { return d.y; });
+// }
+
+function tick(e) {
+  circle
+      .each(gravity(.08 * e.alpha))
+      .each(collide(.5))
+      // .attr("cx", function(d) { return d.x; })
+      // .attr("cy", function(d) { return d.y; });
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function dblclick(d) {
+  d3.select(this).classed("fixed", d.fixed = false);
+}
+
+function unfix(d) {
+  console.log("hkjh");
+
+ if (d.fixed==true) {d.fixed=false};
+ console.log(d.fixed);
+}
+
+function dragend(d,i) {
+  // var selec = d3.select(this)
+  //   console.log(d3.select(this).classed("fixed"));
+  //   console.log(d.fixed);
+  //   if (d3.select(this).classed("fixed")==false) {
+  //     console.log(d.fixed);
+  //     d3.select(this).classed("fixed", d.fixed=true);
+  //   };
+
+var old=d.cx;
+var old_y=d.cy;
+console.log(old);
+console.log(nodes[i]);
+console.log(old);
+d.cx=d.x;
+d.cy=d.y;
+ for (i=0;i<15; i++) {
+ var x=nodes[Math.floor(Math.random() * n)];
+x.cx=d.x;
+x.cy=d.y;
+}
+
+console.log(d.cx);
+console.log(d3.select(this));
+
+var food=svg.append("image")
+.attr("xlink:href", "http://www.hunterlab.com/images/content-images/Food-Cereal_Grains.png")
+    .attr("y", d.y+100)
+    .attr("x", d.x+120)
+    .attr("width", 30)
+      .attr("height", 30);
+
+ // d3.select(this).transition().transition(1000).style("fill", "red").each("end",function(d) {
+ //  console.log("delay");
+ //  d.cx=100;});
+
+  var x=nodes[i];
+
+  setTimeout(function() {
+    x.cx=old;
+    x.cy=old_y;
+    food.transition()
+    .duration(1000)
+    .attr("opacity", 0);
+  }, 2000);
+  // console.log("ned");
+    // d3.select(this)
+    // .transition()
+    // .delay(1000)
+    // .classed("fixed", d.fixed = false);
+}
+
+
+function dragclick() {
+
+var j=[];
+for (i=0;i<15; i++) {
+j.push(Math.floor(Math.random() * n);
+var old=nodes[j[i]].cx;
+var old_y=nodes[j[i]].cy;
+}
+
+for (i=0;i<15; i++) {
+
+nodes[j[i]].cx=;
+nodes[j[i]].cy=;
+}
+
+
+
+
+d.cx=d.x;
+d.cy=d.y;
+ 
+
+var food=svg.append("image")
+.attr("xlink:href", "http://www.hunterlab.com/images/content-images/Food-Cereal_Grains.png")
+    .attr("y", d.y+100)
+    .attr("x", d.x+120)
+    .attr("width", 30)
+      .attr("height", 30);
+
+ // d3.select(this).transition().transition(1000).style("fill", "red").each("end",function(d) {
+ //  console.log("delay");
+ //  d.cx=100;});
+
+  var x=nodes[i];
+
+  setTimeout(function() {
+    x.cx=old;
+    x.cy=old_y;
+    food.transition()
+    .duration(1000)
+    .attr("opacity", 0);
+  }, 2000);
+  // console.log("ned");
+    // d3.select(this)
+    // .transition()
+    // .delay(1000)
+    // .classed("fixed", d.fixed = false);
+}
+
+// // Move d to be adjacent to the cluster node.
+// function cluster(alpha) {
+//   return function(d) {
+//     var cluster = clusters[d.cluster];
+//     if (cluster === d) return;
+//     var x = d.x - cluster.x,
+//         y = d.y - cluster.y,
+//         l = Math.sqrt(x * x + y * y),
+//         r = d.radius + cluster.radius;
+//     if (l != r) {
+//       l = (l - r) / l * alpha;
+//       d.x -= x *= l;
+//       d.y -= y *= l;
+//       cluster.x += x;
+//       cluster.y += y;
+//     }
+//   };
+// }
+
+// Move nodes toward cluster focus.
+function gravity(alpha) {
+  return function(d) {
+    d.y += (d.cy - d.y) * alpha;
+    d.x += (d.cx - d.x) * alpha;
+  };
+}
+
+
+// Resolves collisions between d and all other circles.
+function collide(alpha) {
+  var quadtree = d3.geom.quadtree(nodes);
+  return function(d) {
+    var r = d.radius + maxRadius + Math.max(padding, clusterPadding),
+        nx1 = d.x - r,
+        nx2 = d.x + r,
+        ny1 = d.y - r,
+        ny2 = d.y + r;
+    quadtree.visit(function(quad, x1, y1, x2, y2) {
+      if (quad.point && (quad.point !== d)) {
+        var x = d.x - quad.point.x,
+            y = d.y - quad.point.y,
+            l = Math.sqrt(x * x + y * y),
+            r = d.radius + quad.point.radius + (d.cluster === quad.point.cluster ? padding : clusterPadding);
+        if (l < r) {
+          l = (l - r) / l * alpha;
+          d.x -= x *= l;
+          d.y -= y *= l;
+          quad.point.x += x;
+          quad.point.y += y;
+        }
+      }
+      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+    });
+  };
+}
+
+</script> -->
